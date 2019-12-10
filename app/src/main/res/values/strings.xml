@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">GoalWiseApplication</string>
+    <string name="search">Search</string>
+    <string name="rs">\u20B9</string>
+    <string name="min_sip_amount">Min SIP Amount: </string>
+    <string name="min_sip_multiple">Min SIP Multiple:</string>
+    <string name="sip_dates">SIP Dates:</string>
+    <string name="add">+Add</string>
+    <string name="space">&#160;</string>
+    <string name="of_every_month">of every month</string>
+    <string name="got_it">Got it</string>
+    <string name="fund_has_been_added_your_dashboard">Fund has been added to your dashboard</string>
+    <string name="has_been_added_your_dashboard">has been added to your dashboard</string>
+    <string name="errorMsg"><![CDATA[Entered number should be > minSipAmount and should be multiple of minSipMultiple.]]></string>
+    <string name="add_fund">Add Fund</string>
+    <string name="enter_sip_hint">Enter sip Amount</string>
+    <string name="fund">Funds</string>
+</resources>
