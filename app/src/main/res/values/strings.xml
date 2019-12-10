@@ -15,4 +15,14 @@
     <string name="add_fund">Add Fund</string>
     <string name="enter_sip_hint">Enter sip Amount</string>
     <string name="fund">Funds</string>
+    <string name="retry">Retry</string>
+    <string name="no_net_msg">No internet connection. Make sure that Wi-Fi or mobile data is turned on, then try again.</string>
+    <string name="ok">OK</string>
+    <string name="time_our_error">Time out.</string>
+    <string name="auth_fail">Authentication Failed.</string>
+    <string name="server_error">Either your internet connection is down or server connection was not established.</string>
+    <string name="netwotk_error">Unable to connect with network.</string>
+    <string name="parser_error">Parse error.</string>
+    <string name="can_not_connect">Cannot connect to internet. Please try again.</string>
+    <string name="unknow_error_txt">Unknown Error</string>
 </resources>

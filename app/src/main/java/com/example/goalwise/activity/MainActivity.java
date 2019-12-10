@@ -1,9 +1,13 @@
 package com.example.goalwise.activity;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -12,8 +16,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.Toast;
@@ -32,7 +39,7 @@ import com.example.goalwise.model.SipRequest;
 import com.example.goalwise.model.SipResponse;
 import com.example.goalwise.net.ApiService;
 import com.example.goalwise.net.GenericRequest;
-
+import com.example.goalwise.utils.AppUtils;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -43,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private Context context;
     private SIPAdapter sipAdapter;
     private SuggestionAdapter suggestionAdapter;
+    private LinearLayout parentLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,14 +64,51 @@ public class MainActivity extends AppCompatActivity {
         removeFocusFromSearchViewAndHideKeyboard();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        checkIfInternetIsAvailable();
+    }
+
+    private void checkIfInternetIsAvailable() {
+        if (!isNetworkAvailable(this)) {
+            showNoInternetDialogBox();
+        }
+    }
+
+    private void showNoInternetDialogBox() {
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        View promptView = layoutInflater.inflate(R.layout.no_net_dialog_box, null);
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this, R.style.AlertDialogTheme);
+        alertDialogBuilder.setView(promptView);
+
+        alertDialogBuilder.setCancelable(false)
+                .setPositiveButton(getString(R.string.ok), (dialog, id) -> checkIfInternetIsAvailable());
+
+        AlertDialog alert = alertDialogBuilder.create();
+        alert.setCanceledOnTouchOutside(false);
+        alert.show();
+    }
+
+    private boolean isNetworkAvailable(Context context) {
+        boolean isNetAvailable = false;
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager != null) {
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            isNetAvailable = activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
+        return isNetAvailable;
+    }
+
     private void setUpToolbar() {
-       ActionBar supportActionBar =  getSupportActionBar();
-       if(supportActionBar != null){
-           getSupportActionBar().setTitle(getString(R.string.fund));
-           getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-           Drawable backArrow = ContextCompat.getDrawable(this, R.drawable.ic_keyboard_arrow_left_white);
-           getSupportActionBar().setHomeAsUpIndicator(backArrow);
-       }
+        ActionBar supportActionBar = getSupportActionBar();
+        if (supportActionBar != null) {
+            supportActionBar.setTitle(getString(R.string.fund));
+            supportActionBar.setDisplayHomeAsUpEnabled(true);
+            Drawable backArrow = ContextCompat.getDrawable(this, R.drawable.ic_keyboard_arrow_left_white);
+            supportActionBar.setHomeAsUpIndicator(backArrow);
+        }
     }
 
     private void removeFocusFromSearchViewAndHideKeyboard() {
@@ -119,14 +164,15 @@ public class MainActivity extends AppCompatActivity {
     private void initIds() {
         searchView = findViewById(R.id.searchView);
         listView = findViewById(R.id.listView);
+        parentLayout = findViewById(R.id.activity_main);
         context = this;
     }
 
     private void performSearch(String query) {
-        if(query != null && query.length() >= 3){
+        if (query != null && query.length() >= 3) {
             suggestionAdapter.swapCursor(ApplicationDB.get().getSuggestion(query));
             callFetchSip(query);
-        }else {
+        } else {
             clearAdapter();
         }
     }
@@ -159,31 +205,36 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void callFetchSip(String query) {
-        SipRequest sipRequest = new SipRequest();
-        sipRequest.setKeyword(query);
-        GenericRequest<SipResponse> logincRequest = new GenericRequest<SipResponse>
-                (Request.Method.POST, APIUrls.get().getSip(),
-                        SipResponse.class, sipRequest,
-                        sipResponse -> {
-                            ApplicationDB.get().upsertSuggestionUsingString(query);
-                            updateList(sipResponse);
-                        },
-                        error -> Toast.makeText(context,"Failure",Toast.LENGTH_SHORT).show());
+        if (isNetworkAvailable(context)) {
+            SipRequest sipRequest = new SipRequest();
+            sipRequest.setKeyword(query);
+            GenericRequest<SipResponse> sipVolleyRequest = new GenericRequest<>
+                    (Request.Method.POST, APIUrls.get().getSip(),
+                            SipResponse.class, sipRequest,
+                            sipResponse -> {
+                                ApplicationDB.get().upsertSuggestionUsingString(query);
+                                updateList(sipResponse);
+                            },
+                            error -> {
+                                String volleyError = AppUtils.getVolleyError(context,error);
+                                AppUtils.openSnackBar(parentLayout, volleyError);
+                            });
 
-        ApiService.get().addToRequestQueue(logincRequest);
+            ApiService.get().addToRequestQueue(sipVolleyRequest);
+        } else {
+            showNoInternetDialogBox();
+        }
+
     }
 
     private void updateList(SipResponse sipResponse) {
-        sipAdapter = new SIPAdapter(context,R.layout.sip_list,sipResponse.getData(), new ShowDialogBoxCallBack() {
-            @Override
-            public void showDialogBox(String fundName) {
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                Bundle bundle = new Bundle();
-                bundle.putString(FUND_NAME,fundName);
-                androidx.fragment.app.DialogFragment dialogFragment = new SuccessDialogFragment();
-                dialogFragment.setArguments(bundle);
-                dialogFragment.show(ft, null);
-            }
+        sipAdapter = new SIPAdapter(context, R.layout.sip_list, sipResponse.getData(), fundName -> {
+            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            Bundle bundle = new Bundle();
+            bundle.putString(FUND_NAME, fundName);
+            androidx.fragment.app.DialogFragment dialogFragment = new SuccessDialogFragment();
+            dialogFragment.setArguments(bundle);
+            dialogFragment.show(ft, null);
         });
         listView.setAdapter(sipAdapter);
     }
