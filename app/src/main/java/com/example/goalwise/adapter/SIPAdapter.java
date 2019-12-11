@@ -88,7 +88,7 @@ public class SIPAdapter extends ArrayAdapter<DataDto> {
             holder.addFundBtn.setOnClickListener(view -> {
                 String sipAmount =  finalHolder1.sipAmount.getText().toString();
                 if(sipAmount.length() > 0){
-                    int parseInt = Integer.parseInt(sipAmount);
+                    long parseInt = Long.parseLong(sipAmount);
                     if(parseInt > item.getMinsipamount() && parseInt % item.getMinsipmultiple() == 0){
                         finalHolder.errorMsg.setVisibility(View.GONE);
                         showDialogBoxCallBack.showDialogBox(item.getFundname());
